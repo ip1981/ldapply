@@ -11,6 +11,10 @@ build-type: Simple
 cabal-version: >=1.20
 extra-source-files: README.md ChangeLog.md
 
+source-repository head
+  type: git
+  location: https://github.com/ip1981/ldapply.git
+
 executable ldapply
   hs-source-dirs: src
   main-is: Main.hs
