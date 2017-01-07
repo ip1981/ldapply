@@ -8,7 +8,7 @@ import Data.Char (toLower)
 import Data.HashMap.Strict (fromListWith, toList)
 import Data.Maybe (fromJust)
 import Data.Version (showVersion)
-import LDAP.Init (ldapSimpleExternalSaslBind, ldapInitialize)
+import LDAP.Init (ldapTrivialExternalSaslBind, ldapInitialize)
 import LDAP.Modify (LDAPMod(..), LDAPModOp(..), ldapAdd, ldapDelete, ldapModify, list2ldm)
 import LDAP.Search (LDAPScope(LdapScopeBase), SearchAttributes(LDAPAllUserAttrs), LDAPEntry(..), ldapSearch)
 import LDAP.Types (LDAP)
@@ -53,7 +53,7 @@ main = do
       ldifs = O.getAllArgs args $ O.argument "LDIF"
       ldapUrl = fromJust $ O.getArg args $ O.shortOption 'H'
     ldap <- ldapInitialize ldapUrl
-    ldapSimpleExternalSaslBind ldap
+    ldapTrivialExternalSaslBind ldap
     mapM_ (processLDIF ldap) ldifs
 
 
