@@ -73,5 +73,10 @@ dn: cn=reader,dc=nodomain
 changetype: modify
 replace: description
 description: foo
+
+# This will be deleted if exists:
+dn: cn=reader,dc=nodomain
+changetype: delete
+
 ```
 

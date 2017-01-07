@@ -81,6 +81,8 @@ apply ldap rec = do
 
 
 update :: LDAP -> Maybe LDAPEntry -> LDIFRecord -> IO ()
+update _ Nothing (ChangeRecord _ ChangeDelete) = return ()
+
 update _ Nothing rec@(ChangeRecord _ _) =
   die $ "cannot update non-existing entry " ++ show (dn rec)
 
