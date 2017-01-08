@@ -8,13 +8,14 @@ import Data.Char (toLower)
 import Data.HashMap.Strict (fromListWith, toList)
 import Data.Maybe (fromJust)
 import Data.Version (showVersion)
-import LDAP.Init (ldapTrivialExternalSaslBind, ldapInitialize)
+import LDAP.Init (ldapSimpleBind, ldapTrivialExternalSaslBind, ldapInitialize)
 import LDAP.Modify (LDAPMod(..), LDAPModOp(..), ldapAdd, ldapDelete, ldapModify, list2ldm)
 import LDAP.Search (LDAPScope(LdapScopeBase), SearchAttributes(LDAPAllUserAttrs), LDAPEntry(..), ldapSearch)
 import LDAP.Types (LDAP)
 import Paths_ldapply (version) -- from cabal
 import System.Environment (getArgs)
 import System.Exit (die)
+import System.IO (IOMode(ReadMode), hGetLine, hIsEOF, withFile)
 import Text.InterpolatedString.Perl6 (qc)
 import Text.LDIF.Parser (defaulLDIFConf, parseLDIFFile)
 import Text.LDIF.Printer (dn2str)
@@ -24,7 +25,6 @@ import qualified System.Console.Docopt.NoTH as O
 {--
  TODO:
     1. Streaming from stdin (good for large amount of LDIF data)
-    2. Simple bind with DN and password
 --}
 
 usage :: String
@@ -38,7 +38,14 @@ Usage:
 Options:
   -H <ldapuri>       LDAP URL to connect to [default: ldapi:///]
 
+  -D <binddn>        Use simple bind with the Distinguished Name <binddn>
+  -w <passwd>        Use <passwd> as the password for simple bind
+  -y <passwdfile>    Read password from <passwdfile>, only the first line is read
+
   -h, --help         Show this message
+
+If option -D is given, simple bind is used, otherwise SASL External.
+If option -w is given, -y is ignored.
 |]
 
 
@@ -52,9 +59,23 @@ main = do
     let
       ldifs = O.getAllArgs args $ O.argument "LDIF"
       ldapUrl = fromJust $ O.getArg args $ O.shortOption 'H'
+      binddn = O.getArg args $ O.shortOption 'D'
+      passwd = O.getArg args $ O.shortOption 'w'
+      passwdfile = O.getArg args $ O.shortOption 'y'
     ldap <- ldapInitialize ldapUrl
-    ldapTrivialExternalSaslBind ldap
+    bind ldap binddn passwd passwdfile
     mapM_ (processLDIF ldap) ldifs
+
+
+bind :: LDAP -> Maybe String -> Maybe String -> Maybe FilePath -> IO ()
+bind ldap Nothing     _          _    = ldapTrivialExternalSaslBind ldap
+bind ldap (Just bdn) (Just pwd)  _    = ldapSimpleBind ldap bdn pwd
+bind ldap (Just bdn) Nothing Nothing  = ldapSimpleBind ldap bdn ""
+bind ldap (Just bdn) Nothing (Just f) = do
+  pwd <- withFile f ReadMode $ \h -> do
+    empty <- hIsEOF h
+    if empty then return "" else hGetLine h
+  ldapSimpleBind ldap bdn pwd
 
 
 processLDIF :: LDAP -> FilePath -> IO ()

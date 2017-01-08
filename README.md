@@ -33,7 +33,14 @@ Type `ldapply --help` to see usage summary:
     Options:
       -H <ldapuri>       LDAP URL to connect to [default: ldapi:///]
 
+      -D <binddn>        Use simple bind with the Distinguished Name <binddn>
+      -w <passwd>        Use <passwd> as the password for simple bind
+      -y <passwdfile>    Read password from <passwdfile>, only the first line is read
+
       -h, --help         Show this message
+
+    If option -D is given, simple bind is used, otherwise SASL External.
+    If option -w is given, -y is ignored.
 
 
 LDIF example
