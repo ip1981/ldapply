@@ -26,7 +26,7 @@ executable ldapply
     , bytestring
     , docopt
     , interpolatedstring-perl6
-    , LDAP >= 0.7.0
+    , LDAP > 0.6.10
     , ldif
     , unordered-containers
 

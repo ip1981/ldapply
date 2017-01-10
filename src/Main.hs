@@ -6,9 +6,9 @@ module Main (
 import Data.ByteString.Char8 (unpack)
 import Data.Char (toLower)
 import Data.HashMap.Strict (fromListWith, toList)
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, fromMaybe)
 import Data.Version (showVersion)
-import LDAP.Init (ldapSimpleBind, ldapTrivialExternalSaslBind, ldapInitialize)
+import LDAP.Init (ldapSimpleBind, ldapExternalSaslBind, ldapInitialize)
 import LDAP.Modify (LDAPMod(..), LDAPModOp(..), ldapAdd, ldapDelete, ldapModify, list2ldm)
 import LDAP.Search (LDAPScope(LdapScopeBase), SearchAttributes(LDAPAllUserAttrs), LDAPEntry(..), ldapSearch)
 import LDAP.Types (LDAP)
@@ -38,13 +38,13 @@ Usage:
 Options:
   -H <ldapuri>       LDAP URL to connect to [default: ldapi:///]
 
-  -D <binddn>        Use simple bind with the Distinguished Name <binddn>
+  -x                 Use simple bind instead of default SASL External
+  -D <binddn>        Use <binddn> for the distinguished name or authorization identity
   -w <passwd>        Use <passwd> as the password for simple bind
   -y <passwdfile>    Read password from <passwdfile>, only the first line is read
 
   -h, --help         Show this message
 
-If option -D is given, simple bind is used, otherwise SASL External.
 If option -w is given, -y is ignored.
 |]
 
@@ -59,19 +59,20 @@ main = do
     let
       ldifs = O.getAllArgs args $ O.argument "LDIF"
       ldapUrl = fromJust $ O.getArg args $ O.shortOption 'H'
-      binddn = O.getArg args $ O.shortOption 'D'
+      simple = O.isPresent args $ O.shortOption 'x'
+      binddn = fromMaybe "" $ O.getArg args $ O.shortOption 'D'
       passwd = O.getArg args $ O.shortOption 'w'
       passwdfile = O.getArg args $ O.shortOption 'y'
     ldap <- ldapInitialize ldapUrl
-    bind ldap binddn passwd passwdfile
+    if simple then simpleBind ldap binddn passwd passwdfile
+              else ldapExternalSaslBind ldap binddn
     mapM_ (processLDIF ldap) ldifs
 
 
-bind :: LDAP -> Maybe String -> Maybe String -> Maybe FilePath -> IO ()
-bind ldap Nothing     _          _    = ldapTrivialExternalSaslBind ldap
-bind ldap (Just bdn) (Just pwd)  _    = ldapSimpleBind ldap bdn pwd
-bind ldap (Just bdn) Nothing Nothing  = ldapSimpleBind ldap bdn ""
-bind ldap (Just bdn) Nothing (Just f) = do
+simpleBind :: LDAP -> String -> Maybe String -> Maybe FilePath -> IO ()
+simpleBind ldap bdn (Just pwd)  _    = ldapSimpleBind ldap bdn pwd
+simpleBind ldap bdn Nothing Nothing  = ldapSimpleBind ldap bdn ""
+simpleBind ldap bdn Nothing (Just f) = do
   pwd <- withFile f ReadMode $ \h -> do
     empty <- hIsEOF h
     if empty then return "" else hGetLine h
