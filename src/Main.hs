@@ -117,7 +117,7 @@ update _ Nothing (ChangeRecord _ ChangeDelete) = return ()
 update _ Nothing rec@(ChangeRecord _ _) =
   die $ "cannot update non-existing entry " ++ show (dn rec)
 update ldap (Just _) rec@(ChangeRecord _ ch) = do
-  putStrLn $ "modifing " ++ show (dn rec)
+  putStrLn $ "modifying " ++ show (dn rec)
   change ldap (dn rec) ch
 update ldap Nothing rec@(ContentRecord _ av) = do
   putStrLn $ "adding " ++ show (dn rec)
